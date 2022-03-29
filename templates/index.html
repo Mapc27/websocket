@@ -130,6 +130,8 @@
             console.log(data)
 
               // тут data уже ['address',]
+              data = new Set(data);
+	          data = Array.from(data);
 	          let addresses_to_red = all_addresses.filter(n => !data.includes(n));
 	          let addresses_to_green = data.filter(n => !all_addresses.includes(n));
             colorize_addresses(addresses_to_red, 'red');
