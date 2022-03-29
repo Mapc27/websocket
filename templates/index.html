@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="html">
     <head>
+         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+   integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+   crossorigin=""/>
+         <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+   integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+   crossorigin=""></script>
         <title>Chat</title>
         <style>
           .red{
@@ -18,6 +24,7 @@
               display: none;
           }
           .map{
+              height: 800px;
               display: none;
           }
           .display{
@@ -47,19 +54,25 @@
             <ul id='addresses'>
             </ul>
           </div>
-          <div id="map" class="map">map</div>
+          <div id="map" class="map"></div>
         </div>
         <script>
           let ws = new WebSocket(`ws://localhost:8000/ws/`);
           let all_addresses = [];
           let addresses = document.getElementById('addresses');
+          let map = L.map('map').setView([55.7504461, 37.6174943], 13);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19,
+              attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+          }).addTo(map);
+          let markers = [];
+          let city_coords = [0, 0];
 
           function colorize_addresses(addresses_to_red, color){
           	for (let address of addresses_to_red){
           		for (let element of addresses.getElementsByTagName('li')){
           			if (element.textContent === address){
           				element.classList.add(color);
-          				console.log("colorize", element.textContent)
                 }
               }
             }
@@ -84,7 +97,6 @@
               element.appendChild(content);
               addresses.appendChild(element);
               all_addresses.push(address);
-              console.log('add', address);
             }
           }
 
@@ -116,26 +128,38 @@
           	all_addresses = [];
 
             let select = document.getElementById("city");
-            ws.send(select.value)
+            ws.send(select.value);
           }
 
           ws.onmessage = function(event) {
-	          let data = JSON.parse(event.data);
-	          if (data.length === 0){
+              let data = JSON.parse(event.data);
+	          if (data.length === 0) {
 	          	window.alert('Net ATM');
 	          	return;
-            }
-	          // todo
-            // тут приходит дата {'address': {lat: 123, lng: 123}}
-            console.log(data)
+	          }
+	          let data_array = [];
 
-              // тут data уже ['address',]
-              data = new Set(data);
-	          data = Array.from(data);
-	          let addresses_to_red = all_addresses.filter(n => !data.includes(n));
-	          let addresses_to_green = data.filter(n => !all_addresses.includes(n));
-            colorize_addresses(addresses_to_red, 'red');
-            add_addresses(addresses_to_green);
+              for (let i = 0; i < markers.length; i++) {
+                  markers[i].remove();
+              }
+
+              if (city_coords[0] !== data['city'][0] || city_coords[1] !== data['city'][1]) {
+                  city_coords[0] = data['city'][0];
+                  city_coords[1] = data['city'][1];
+                  map.setView(city_coords, 13);
+              }
+
+	          for (let coords in data) {
+	              if (data.hasOwnProperty(coords) && coords !== 'city') {
+	                  data_array.push(coords);
+	                  markers.push(L.marker({lon: data[coords].lng, lat: data[coords].lat}).bindPopup(coords).addTo(map));
+                  }
+	          }
+
+	          let addresses_to_red = all_addresses.filter(n => !data_array.includes(n));
+	          let addresses_to_green = data_array.filter(n => !all_addresses.includes(n));
+	          colorize_addresses(addresses_to_red, 'red');
+	          add_addresses(addresses_to_green);
           };
         </script>
     </body>

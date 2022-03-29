@@ -104,12 +104,11 @@ async def send_to_client(city, websocket):
     if coordinates:
         async with aiohttp.ClientSession() as session:
             response = await post_request(coordinates, session)
-        # data = {}
-        data = []
+        data = {}
         for cluster in response['payload']['clusters']:
             for point in cluster['points']:
-                data.append(point['address'])
-                # data[point['address']] = point['location']
+                data[point['address']] = point['location']
+        data['city'] = cities[city]
         await manager.send_json(data, websocket)
         return True
 
