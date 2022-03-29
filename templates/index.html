@@ -125,10 +125,11 @@
 	          	window.alert('Net ATM');
 	          	return;
             }
+	          // todo
+            // тут приходит дата {'address': {lat: 123, lng: 123}}
+            console.log(data)
 
-            data = new Set(data);
-	          data = Array.from(data);
-
+              // тут data уже ['address',]
 	          let addresses_to_red = all_addresses.filter(n => !data.includes(n));
 	          let addresses_to_green = data.filter(n => !all_addresses.includes(n));
             colorize_addresses(addresses_to_red, 'red');
