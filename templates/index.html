@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="html">
+    <head>
+        <title>Chat</title>
+        <style>
+          .red{
+              color: red;
+              border: 1px solid red;
+          }
+          .green{
+              color: green;
+              border: 1px solid green;
+          }
+          .black{
+              color: black;
+          }
+          .list{
+              display: none;
+          }
+          .map{
+              display: none;
+          }
+          .display{
+              display: block;
+          }
+        </style>
+    </head>
+    <body>
+        <form action="">
+          <label for="city">City</label>
+          <select name="city" id="city">
+            {% for city in cities %}
+              <option value="{{city}}" onchange="sendMessage()">{{city}}</option>
+            {% endfor %}
+          </select>
+            <button type="button">Send</button>
+        </form>
+        <div class="content">
+          <form class="radio">
+            <label for="list-radio">List</label>
+            <input id="list-radio" type="radio" name="radio" oninput="switch_to_list()" checked>
+
+            <label for="map-radio">Map</label>
+            <input id="map-radio" type="radio" name="radio" oninput="switch_to_map()">
+          </form>
+          <div id="list" class="list display">
+            <ul id='addresses'>
+            </ul>
+          </div>
+          <div id="map" class="map">map</div>
+        </div>
+        <script>
+          let ws = new WebSocket(`ws://localhost:8000/ws/`);
+          let all_addresses = [];
+          let addresses = document.getElementById('addresses');
+
+          function colorize_addresses(addresses_to_red, color){
+          	for (let address of addresses_to_red){
+          		for (let element of addresses.getElementsByTagName('li')){
+          			if (element.textContent === address){
+          				element.classList.add(color);
+          				console.log("colorize", element.textContent)
+                }
+              }
+            }
+
+          }
+          function add_addresses(addresses_list){
+          	let need_green = false;
+          	if (all_addresses.length !== 0){
+          		need_green = true;
+            }
+
+            for (let address of addresses_list){
+            	if(all_addresses.indexOf(address) !== -1){
+            		colorize_addresses([address], 'green');
+            		continue;
+              }
+              let element = document.createElement('li');
+              if (need_green){
+              	element.classList.add('green');
+              }
+              let content = document.createTextNode(address);
+              element.appendChild(content);
+              addresses.appendChild(element);
+              all_addresses.push(address);
+              console.log('add', address);
+            }
+          }
+
+          function switch_to_list(){
+          	console.log('switch_to_list');
+            let list = document.getElementById("list");
+            let map = document.getElementById("map");
+            if (map.classList.contains("display")) {
+            document.getElementById("map").classList.remove("display");
+            }
+            if (! list.classList.contains("display")) {
+            document.getElementById("list").classList.add("display");
+	          }
+          }
+          function switch_to_map(){
+          	console.log('switch_to_map');
+          	let list = document.getElementById("list");
+            let map = document.getElementById("map");
+            if (list.classList.contains("display")) {
+            document.getElementById("list").classList.remove("display");
+            }
+            if (! map.classList.contains("display")) {
+            document.getElementById("map").classList.add("display");
+            }
+          }
+
+          function sendMessage() {
+          	addresses.innerHTML = '';
+          	all_addresses = [];
+
+            let select = document.getElementById("city");
+            ws.send(select.value)
+          }
+
+          ws.onmessage = function(event) {
+	          let data = JSON.parse(event.data);
+	          if (data.length === 0){
+	          	window.alert('Net ATM');
+	          	return;
+            }
+
+            data = new Set(data);
+	          data = Array.from(data);
+
+	          let addresses_to_red = all_addresses.filter(n => !data.includes(n));
+	          let addresses_to_green = data.filter(n => !all_addresses.includes(n));
+            colorize_addresses(addresses_to_red, 'red');
+            add_addresses(addresses_to_green);
+          };
+        </script>
+    </body>
+</html>
